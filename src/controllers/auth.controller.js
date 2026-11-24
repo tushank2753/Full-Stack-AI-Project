@@ -6,7 +6,7 @@ const tokenBlacklistModel = require('../models/blacklist.model')
 /**
  * @name registerUserController
  * @description register a new user, expects username, email an d password in te request body
- * @access Public
+ * @access public
  */
 
 async function registerUserController(req, res) {
@@ -20,10 +20,10 @@ async function registerUserController(req, res) {
     }
 
     const isUserAlreadyExists = await userModel.findOne({
-        $or: [ { username }, { email }]
+        $or: [{ username }, { email }]
     })
 
-    if(isUserAlreadyExists){
+    if (isUserAlreadyExists) {
         return res.status(400).json({
             message: 'Account already exists with this email address or username'
         })
@@ -40,9 +40,8 @@ async function registerUserController(req, res) {
     const token = jwt.sign(
         { id: user._id, username: user.username },
         process.env.JWT_SECRET,
-        {expiresIn: '1d'}
+        { expiresIn: '1d' }
     )
-
     res.cookie('token', token)
 
     res.status(201).json({
@@ -56,17 +55,15 @@ async function registerUserController(req, res) {
 
 }
 
-
 /**
  * @name loginUserController
  * @description login a user, expects email and password in te request body
- * @access Public
+ * @access public
  */
 
 async function loginUserController(req, res) {
 
     const { email, password } = req.body
-
     const user = await userModel.findOne({ email })
 
     if (!user) {
@@ -77,7 +74,7 @@ async function loginUserController(req, res) {
 
     const isPasswordValid = await bcrypt.compare(password, user.password)
 
-    if(!isPasswordValid) {
+    if (!isPasswordValid) {
         return res.status(400).json({
             message: 'Invalid email or password'
         })
@@ -86,7 +83,7 @@ async function loginUserController(req, res) {
     const token = jwt.sign(
         { id: user._id, username: user.username },
         process.env.JWT_SECRET,
-        {expiresIn: '1d'}
+        { expiresIn: '1d' }
     )
 
     res.cookie('token', token)
@@ -94,13 +91,18 @@ async function loginUserController(req, res) {
         message: 'User loggedIn successfully.',
         user: {
             id: user._id,
-            username:user.username,
+            username: user.username,
             email: user.email
         }
     })
 
 }
 
+/**
+ * @name logoutUserController
+ * @description clear token from user cookie and add the token in blacklist
+ * @access public
+ */
 
 async function logoutUserController(req, res) {
     const token = req.cookies.token
@@ -108,7 +110,6 @@ async function logoutUserController(req, res) {
     if (token) {
         await tokenBlacklistModel.create({ token })
     }
-
     res.clearCookie('token')
 
     res.status(200).json({
@@ -116,8 +117,28 @@ async function logoutUserController(req, res) {
     })
 }
 
+/**
+ * @name getMeController
+ * @description get te current logged in user details
+ * @access private
+ */
+
+async function getMeController(req, res) {
+    const user = await userModel.findById(req.user.id)
+
+    res.status(200).json({
+        message: 'User details fetced successfully',
+        user: {
+            id: user._id,
+            username: user.username,
+            email: user.email
+        }
+    })
+}
+
 module.exports = {
     registerUserController,
     loginUserController,
-    logoutUserController
+    logoutUserController,
+    getMeController
 }
